@@ -10,6 +10,7 @@
 
 #include "../include/LrTextureShadRem.h"
 using namespace cv;
+using namespace std::chrono;
 
 const std::vector<cv::Mat> LrTextureShadRem::skeletonKernels = getSkeletonKernels();
 
@@ -29,15 +30,22 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	ConnCompGroup fg(fgMask);
 	fg.mask.copyTo(srMask);
 
+	auto startT = high_resolution_clock::now();
+
 	cv::Mat grayFrame, grayBg, hsvFrame, hsvBg;
 	cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
 	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
 
+	auto stopT = high_resolution_clock::now();
+	auto durationConverter = duration_cast<microseconds>(stopT - startT);
+
 	//cv::imshow("fgMask", fgMask);
 	//cv::imshow("srMask", srMask);
 	//cv::waitKey();
+
+	startT = high_resolution_clock::now();
 
 	// calculate global frame properties
 	avgAtten = ((avgAtten * frameCount) + frameAvgAttenuation(hsvFrame, hsvBg, fg.mask)) / (frameCount + 1);
@@ -45,6 +53,12 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	avgPerim = ((avgPerim * frameCount) + fgAvgPerim(fg)) / (frameCount + 1);
 	++frameCount;
 
+	stopT = high_resolution_clock::now();
+	auto durationFrameProps = duration_cast<microseconds>(stopT - startT);
+
+
+
+	startT = high_resolution_clock::now();
 	// find candidate shadow pixels
 	getCandidateShadows(hsvFrame, hsvBg, fg.mask, candidateShadows);
 	
@@ -63,6 +77,12 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	// connected components are candidate shadow regions
 	splitCandidateShadows.update(splitCandidateShadowsMask, false, true);
+
+	stopT = high_resolution_clock::now();
+	auto durationDetector = duration_cast<microseconds>(stopT - startT);
+
+
+	startT = high_resolution_clock::now();
 
 	shadows.create(grayFrame.size(), CV_8U);
 	shadows.setTo(cv::Scalar(0));
@@ -94,6 +114,16 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 		postSrMask.update(srMask, params.cleanSrMask, params.fillSrMask);
 		postSrMask.mask.copyTo(srMask);
 	}
+
+
+	stopT = high_resolution_clock::now();
+	auto durationPost = duration_cast<microseconds>(stopT - startT);
+
+
+	std::cout << "Color Converter: " << durationConverter.count() / 1e6 << " seconds\n";
+	std::cout << "Frame Prop Calcs: " << durationFrameProps.count() / 1e6 << " seconds\n";
+	std::cout << "Edge Detector: " << durationDetector.count() / 1e6 << " seconds\n";
+	std::cout << "Post Processing: " << durationPost.count() / 1e6 << " seconds\n";
 }
 
 float LrTextureShadRem::frameAvgAttenuation(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg) {
@@ -336,11 +366,10 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	cv::Mat invCandidateShadows(candidateShadows.size(), CV_8U, cv::Scalar(255));
 	invCandidateShadows.setTo(0, candidateShadows);
 
-	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize,
-			params.cannyL2Grad);
+	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 	cannyFrame.setTo(0, invCandidateShadows);
 
-	cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
+	cv::Canny(grayBg,    cannyBg,    params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 	cannyBg.setTo(0, invCandidateShadows);
 
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);

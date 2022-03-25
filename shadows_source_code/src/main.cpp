@@ -15,6 +15,8 @@ using namespace std::chrono;
 
 
 int main() {
+
+	cv::setNumThreads(1);
 	// load frame, background and foreground
 	cv::Mat frame = cv::imread("../shadows_source_code/samples/frame.bmp");
 	cv::Mat bg    = cv::imread("../shadows_source_code/samples/bg.bmp");
@@ -39,7 +41,7 @@ int main() {
 	cv::imshow("fg", fg);
 	cv::imshow("lrTex", lrTexMask);
 	std::cout << "Done!\n";
-	std::cout << duration.count() / 1e6 << " seconds\n";
+	std::cout << "Total Time: " << duration.count() / 1e6 << " seconds\n";
 
 	cv::waitKey();
 
