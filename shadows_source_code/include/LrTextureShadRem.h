@@ -14,6 +14,7 @@
 #include <opencv2/opencv.hpp>
 #include "LrTextureShadRemParams.h"
 #include "ConnCompGroup.h"
+#include "opencv2/core/utils/logger.hpp"
 #include <vector>
 
 /**

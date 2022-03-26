@@ -9,6 +9,7 @@
 // (see http://www.opensource.org/licenses for more info)
 
 #include "opencv2/opencv.hpp"
+#include "opencv2/core/utils/logger.hpp"
 #include "../include/ConnComp.h"
 using namespace cv;
 
@@ -19,6 +20,7 @@ ConnComp::~ConnComp() {
 }
 
 void ConnComp::draw(cv::Mat& dst, const cv::Scalar& color, bool filled) const {
+	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::drawContours(dst, contours, -1, color, (filled ? FILLED : 1));
 }
 
