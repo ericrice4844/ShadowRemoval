@@ -9,20 +9,28 @@
 // (see http://www.opensource.org/licenses for more info)
 
 #include <opencv2/highgui/highgui.hpp>
+#include "opencv2/core/utils/logger.hpp"
 #include "../include/LrTextureShadRem.h"
 using namespace cv;
 using namespace std::chrono;
 
 
+
 int main() {
 
 	cv::setNumThreads(1);
+	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
+
+	std::cout << "\nBeginning Image Processing\n\n";
+
 	// load frame, background and foreground
 	cv::Mat frame = cv::imread("../shadows_source_code/samples/frame.bmp");
 	cv::Mat bg    = cv::imread("../shadows_source_code/samples/bg.bmp");
 	cv::Mat blank = cv::imread("../shadows_source_code/samples/blank.bmp", IMREAD_GRAYSCALE);
 	cv::Mat fg    = cv::imread("../shadows_source_code/samples/fg.bmp", IMREAD_GRAYSCALE);
 
+
+	
 	// create shadow removers
 	LrTextureShadRem lrTex;
 
@@ -36,14 +44,18 @@ int main() {
 	auto duration = duration_cast<microseconds>(stop - start);
 
 	// show results
+
 	cv::imshow("frame", frame);
 	cv::imshow("bg", bg);
 	cv::imshow("fg", fg);
 	cv::imshow("lrTex", lrTexMask);
-	std::cout << "Done!\n";
-	std::cout << "Total Time: " << duration.count() / 1e6 << " seconds\n";
+
+
+	std::cout << "\n\nDone!\n";
+	std::cout << "\nImage size: " << frame.size;
+	std::cout << "\nTotal Time: " << duration.count() / 1e6 << " seconds\n";
 
 	cv::waitKey();
-
+	
 	return 0;
 }
