@@ -8,11 +8,12 @@
 // or (at your option) any later version.
 // (see http://www.opensource.org/licenses for more info)
 
+#include <limits>
 #include "../include/ConnCompGroup.h"
+#include "opencv2/opencv.hpp"
 using namespace cv;
 
 ConnCompGroup::ConnCompGroup(const cv::Mat& fgMask) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	if (!fgMask.empty()) {
 		update(fgMask);
 	}
@@ -22,7 +23,6 @@ ConnCompGroup::~ConnCompGroup() {
 }
 
 void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int minPerim) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	mask.create(fgMask.size(), CV_8U);
 	mask.setTo(cv::Scalar(0));
 	comps.clear();
@@ -82,6 +82,5 @@ void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int min
 }
 
 void ConnCompGroup::draw(cv::Mat& dst, const cv::Scalar& color, bool filled) const {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::drawContours(dst, contours, -1, color, (filled ? FILLED : 1));
 }

@@ -10,12 +10,10 @@
 
 #include "../include/LrTextureShadRem.h"
 using namespace cv;
-using namespace std::chrono;
 
 const std::vector<cv::Mat> LrTextureShadRem::skeletonKernels = getSkeletonKernels();
 
 LrTextureShadRem::LrTextureShadRem(const LrTextureShadRemParams& params) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	this->params = params;
 
 	frameCount = 0;
@@ -28,43 +26,24 @@ LrTextureShadRem::~LrTextureShadRem() {
 }
 
 void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask, const cv::Mat& bg, cv::Mat& srMask) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	ConnCompGroup fg(fgMask);
 	fg.mask.copyTo(srMask);
 
-	auto startT = high_resolution_clock::now();
-
-	// TODO Make color convert parallel
 	cv::Mat grayFrame, grayBg, hsvFrame, hsvBg;
 	cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
 	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
 
-	auto stopT = high_resolution_clock::now();
-	auto durationConverter = duration_cast<microseconds>(stopT - startT);
-
 	//cv::imshow("fgMask", fgMask);
 	//cv::imshow("srMask", srMask);
 	//cv::waitKey();
 
-	startT = high_resolution_clock::now();
-
-	// TODO Make frame stats parallel
 	// calculate global frame properties
 	avgAtten = ((avgAtten * frameCount) + frameAvgAttenuation(hsvFrame, hsvBg, fg.mask)) / (frameCount + 1);
 	avgSat = ((avgSat * frameCount) + frameAvgSaturation(hsvFrame, fg.mask)) / (frameCount + 1);
 	avgPerim = ((avgPerim * frameCount) + fgAvgPerim(fg)) / (frameCount + 1);
 	++frameCount;
-
-	stopT = high_resolution_clock::now();
-	auto durationFrameProps = duration_cast<microseconds>(stopT - startT);
-
-
-
-	startT = high_resolution_clock::now();
-
-	// TODO Make edge finding parallel
 
 	// find candidate shadow pixels
 	getCandidateShadows(hsvFrame, hsvBg, fg.mask, candidateShadows);
@@ -84,13 +63,6 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	// connected components are candidate shadow regions
 	splitCandidateShadows.update(splitCandidateShadowsMask, false, true);
-
-	stopT = high_resolution_clock::now();
-	auto durationDetector = duration_cast<microseconds>(stopT - startT);
-
-
-	startT = high_resolution_clock::now();
-	// TODO Post processing parallel
 
 	shadows.create(grayFrame.size(), CV_8U);
 	shadows.setTo(cv::Scalar(0));
@@ -122,20 +94,9 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 		postSrMask.update(srMask, params.cleanSrMask, params.fillSrMask);
 		postSrMask.mask.copyTo(srMask);
 	}
-
-
-	stopT = high_resolution_clock::now();
-	auto durationPost = duration_cast<microseconds>(stopT - startT);
-
-
-	std::cout << "Color Converter: " << durationConverter.count() / 1e6 << " seconds\n";
-	std::cout << "Frame Prop Calcs: " << durationFrameProps.count() / 1e6 << " seconds\n";
-	std::cout << "Edge Detector: " << durationDetector.count() / 1e6 << " seconds\n";
-	std::cout << "Post Processing: " << durationPost.count() / 1e6 << " seconds\n";
 }
 
 float LrTextureShadRem::frameAvgAttenuation(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	float avgAtten = 0;
 	int count = 0;
 	for (int y = 0; y < hsvFrame.rows; ++y) {
@@ -170,7 +131,6 @@ float LrTextureShadRem::frameAvgAttenuation(const cv::Mat& hsvFrame, const cv::M
 }
 
 float LrTextureShadRem::frameAvgSaturation(const cv::Mat& hsvFrame, const cv::Mat& fg) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	float avgSat = 0;
 	int count = 0;
 	int vSum = 0;
@@ -195,7 +155,6 @@ float LrTextureShadRem::frameAvgSaturation(const cv::Mat& hsvFrame, const cv::Ma
 }
 
 float LrTextureShadRem::fgAvgPerim(const ConnCompGroup& fg) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	float avgPerim = 0;
 
 	for (int i = 0; i < (int) fg.comps.size(); ++i) {
@@ -210,7 +169,6 @@ float LrTextureShadRem::fgAvgPerim(const ConnCompGroup& fg) {
 }
 
 void LrTextureShadRem::maskDiff(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, const int m2Radius) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	diff.create(m1.size(), CV_8U);
 	const int temp = 2 * m2Radius + 1;
 
@@ -255,7 +213,6 @@ void LrTextureShadRem::maskDiff(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, const i
 }
 
 void LrTextureShadRem::getSkeleton(const cv::Mat& mask, cv::Mat& skeleton) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::Mat tmpMask = mask.clone();
 	tmpMask.copyTo(skeleton);
 
@@ -299,7 +256,6 @@ void LrTextureShadRem::getSkeleton(const cv::Mat& mask, cv::Mat& skeleton) {
 }
 
 std::vector<cv::Mat> LrTextureShadRem::getSkeletonKernels() {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	std::vector<cv::Mat> skeletonKernels(8);
 
 	skeletonKernels[0].create(3, 3, CV_8U);
@@ -337,7 +293,6 @@ std::vector<cv::Mat> LrTextureShadRem::getSkeletonKernels() {
 
 void LrTextureShadRem::getCandidateShadows(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg,
 		cv::Mat& hsvMask) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	float vThreshLower = (
 			avgAtten < params.avgAttenThresh ? params.vThreshLowerLowAtten : params.vThreshLowerHighAtten);
 	float vThreshUpper = (
@@ -378,14 +333,14 @@ void LrTextureShadRem::getCandidateShadows(const cv::Mat& hsvFrame, const cv::Ma
 void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& grayBg, const ConnCompGroup& fg,
 		const cv::Mat& candidateShadows, cv::Mat& cannyFrame, cv::Mat& cannyBg, cv::Mat& cannyDiffWithBorders,
 		cv::Mat& borders, cv::Mat& cannyDiff) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::Mat invCandidateShadows(candidateShadows.size(), CV_8U, cv::Scalar(255));
 	invCandidateShadows.setTo(0, candidateShadows);
 
-	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
+	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize,
+			params.cannyL2Grad);
 	cannyFrame.setTo(0, invCandidateShadows);
 
-	cv::Canny(grayBg,    cannyBg,    params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
+	cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 	cannyBg.setTo(0, invCandidateShadows);
 
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);
@@ -411,7 +366,6 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 }
 
 float LrTextureShadRem::getGradDirCorr(const cv::Mat& grayFrame, const ConnComp& cc, const cv::Mat& grayBg) {
-	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	std::vector<int> deltas(params.gradScales);
 	deltas[0] = 1;
 	for (int i = 1; i < params.gradScales; ++i) {

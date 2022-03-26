@@ -11,9 +11,6 @@
 #ifndef CONNCOMPGROUP_H_
 #define CONNCOMPGROUP_H_
 
-#include "opencv2/core/utils/logger.hpp"
-#include <limits>
-#include "opencv2/opencv.hpp"
 #include "ConnComp.h"
 #include <vector>
 
