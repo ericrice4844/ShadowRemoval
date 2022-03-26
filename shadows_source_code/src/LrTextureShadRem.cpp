@@ -10,6 +10,7 @@
 
 #include "../include/LrTextureShadRem.h"
 using namespace cv;
+using namespace std::chrono;
 
 const std::vector<cv::Mat> LrTextureShadRem::skeletonKernels = getSkeletonKernels();
 
@@ -39,6 +40,9 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
+
+	auto stopT = high_resolution_clock::now();
+	auto durationConverter = duration_cast<microseconds>(stopT - startT);
 
 	//cv::imshow("fgMask", fgMask);
 	//cv::imshow("srMask", srMask);
@@ -110,8 +114,18 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 		postShadows.update(shadows, false, params.fillShadows, params.minShadowPerim);
 		postShadows.mask.copyTo(shadows);
 	}
+
+
+	stopT = high_resolution_clock::now();
+	auto durationPost = duration_cast<microseconds>(stopT - startT);
 	//cv::imshow("shadows", shadows);
 	//cv::waitKey();
+
+	 
+	std::cout << "Color Converter: "  << durationConverter.count()  / 1e6 << " seconds\n";
+	std::cout << "Frame Prop Calcs: " << durationFrameProps.count() / 1e6 << " seconds\n";
+	std::cout << "Edge Detector: "    << durationDetector.count()   / 1e6 << " seconds\n";
+	std::cout << "Post Processing: "  << durationPost.count()       / 1e6 << " seconds\n";
 
 	srMask.setTo(0, shadows);
 	if (params.cleanSrMask || params.fillSrMask) {
