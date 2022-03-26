@@ -15,7 +15,6 @@ using namespace cv;
 using namespace std::chrono;
 
 
-
 int main() {
 
 	cv::setNumThreads(1);
@@ -24,11 +23,12 @@ int main() {
 	std::cout << "\nBeginning Image Processing\n\n";
 
 	// load frame, background and foreground
-	cv::Mat frame = cv::imread("../shadows_source_code/samples/frame.bmp");
-	cv::Mat bg    = cv::imread("../shadows_source_code/samples/bg.bmp");
-	cv::Mat blank = cv::imread("../shadows_source_code/samples/blank.bmp", IMREAD_GRAYSCALE);
-	cv::Mat fg    = cv::imread("../shadows_source_code/samples/fg.bmp", IMREAD_GRAYSCALE);
+	cv::Mat frame = cv::imread("../shadows_source_code/samples/BackYard/frame2.jpg");
+	cv::Mat bg    = cv::imread("../shadows_source_code/samples/BackYard/bg2.jpg");
+	cv::Mat blank = cv::imread("../shadows_source_code/samples/BackYard/blank2.bmp", IMREAD_GRAYSCALE);
+	cv::Mat fg    = cv::imread("../shadows_source_code/samples/BackYard/blank2.bmp", IMREAD_GRAYSCALE);
 
+	std::cout << "Images Loaded \n\n";
 
 	
 	// create shadow removers

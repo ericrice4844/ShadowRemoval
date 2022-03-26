@@ -32,9 +32,9 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	ConnCompGroup fg(fgMask);
 	fg.mask.copyTo(srMask);
 
+	// TODO Make color convert parallel
 	auto startT = high_resolution_clock::now();
 
-	// TODO Make color convert parallel
 	cv::Mat grayFrame, grayBg, hsvFrame, hsvBg;
 	cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
 	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
@@ -48,10 +48,10 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	//cv::imshow("srMask", srMask);
 	//cv::waitKey();
 
-	startT = high_resolution_clock::now();
-
 	// TODO Make frame stats parallel
 	// calculate global frame properties
+	startT = high_resolution_clock::now();
+
 	avgAtten = ((avgAtten * frameCount) + frameAvgAttenuation(hsvFrame, hsvBg, fg.mask)) / (frameCount + 1);
 	avgSat = ((avgSat * frameCount) + frameAvgSaturation(hsvFrame, fg.mask)) / (frameCount + 1);
 	avgPerim = ((avgPerim * frameCount) + fgAvgPerim(fg)) / (frameCount + 1);
@@ -62,9 +62,9 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 
 
+	// TODO Make edge finding parallel
 	startT = high_resolution_clock::now();
 
-	// TODO Make edge finding parallel
 
 	// find candidate shadow pixels
 	getCandidateShadows(hsvFrame, hsvBg, fg.mask, candidateShadows);
@@ -89,8 +89,8 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	auto durationDetector = duration_cast<microseconds>(stopT - startT);
 
 
-	startT = high_resolution_clock::now();
 	// TODO Post processing parallel
+	startT = high_resolution_clock::now();
 
 	shadows.create(grayFrame.size(), CV_8U);
 	shadows.setTo(cv::Scalar(0));
@@ -335,13 +335,11 @@ std::vector<cv::Mat> LrTextureShadRem::getSkeletonKernels() {
 	return skeletonKernels;
 }
 
-void LrTextureShadRem::getCandidateShadows(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg,
-		cv::Mat& hsvMask) {
+void LrTextureShadRem::getCandidateShadows(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg, cv::Mat& hsvMask) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
-	float vThreshLower = (
-			avgAtten < params.avgAttenThresh ? params.vThreshLowerLowAtten : params.vThreshLowerHighAtten);
-	float vThreshUpper = (
-			avgAtten < params.avgAttenThresh ? params.vThreshUpperLowAtten : params.vThreshUpperHighAtten);
+
+	float vThreshLower = (avgAtten < params.avgAttenThresh ? params.vThreshLowerLowAtten : params.vThreshLowerHighAtten);
+	float vThreshUpper = (avgAtten < params.avgAttenThresh ? params.vThreshUpperLowAtten : params.vThreshUpperHighAtten);
 	float hThresh = (avgSat < params.avgSatThresh ? params.hThreshLowSat : params.hThreshHighSat);
 	float sThresh = (avgSat < params.avgSatThresh ? params.sThreshLowSat : params.sThreshHighSat);
 
