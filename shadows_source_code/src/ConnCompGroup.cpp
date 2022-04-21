@@ -10,7 +10,11 @@
 
 #include "../include/ConnCompGroup.h"
 using namespace cv;
+using namespace std::chrono;
 
+// ##################################################################################################
+// ###   ConnCompGroup()   ### 
+// constructor
 ConnCompGroup::ConnCompGroup(const cv::Mat& fgMask) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	if (!fgMask.empty()) {
@@ -18,9 +22,16 @@ ConnCompGroup::ConnCompGroup(const cv::Mat& fgMask) {
 	}
 }
 
+// ##################################################################################################
+// ###   ConnCompGroup()   ### 
+// destructor
 ConnCompGroup::~ConnCompGroup() {
 }
 
+
+// ##################################################################################################
+// ###   update()   ### 
+// main function here. TODO - describe
 void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int minPerim) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	mask.create(fgMask.size(), CV_8U);
@@ -38,6 +49,9 @@ void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int min
 	}
 
 	// find contours
+
+	auto start = high_resolution_clock::now();
+
 	int mode = (fill ? RETR_EXTERNAL : RETR_CCOMP);
 	cv::findContours(cleanMask, contours, hierarchy, mode, CHAIN_APPROX_NONE);
 	int i = 0;
@@ -79,8 +93,14 @@ void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int min
 
 		i = hierarchy[i][0];
 	}
+	auto stop = high_resolution_clock::now();
+	auto duration = duration_cast<microseconds>(stop - start);
+	std::cout << "          ConnCompGroup::update() Time: " << duration.count() / 1e6 << " seconds\n";
 }
 
+// ##################################################################################################
+// ###   draw()   ### 
+// TODO - describe
 void ConnCompGroup::draw(cv::Mat& dst, const cv::Scalar& color, bool filled) const {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::drawContours(dst, contours, -1, color, (filled ? FILLED : 1));

@@ -17,6 +17,11 @@
 #include "opencv2/core/utils/logger.hpp"
 #include <vector>
 
+#include "../../ShadowRemoval/Parallel_Kernels.h"
+
+/*
+*/
+
 /**
  * Implemented from:
  *    Improved shadow removal for robust person tracking in surveillance scenarios
