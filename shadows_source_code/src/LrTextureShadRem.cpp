@@ -7,7 +7,7 @@
 // Free Software Foundation, either version 3 of the License
 // or (at your option) any later version.
 // (see http://www.opensource.org/licenses for more info)
-
+#include <stdexcept>
 #include "../include/LrTextureShadRem.h"
 using namespace cv;
 using namespace std::chrono;
@@ -30,6 +30,40 @@ LrTextureShadRem::LrTextureShadRem(const LrTextureShadRemParams& params) {
 LrTextureShadRem::~LrTextureShadRem() {
 }
 
+
+
+
+// ##################################################################################################
+// ###   convertCv2Arr_1Chan()   ###
+// main function call to identify shadows in an image. Tons of calls in here
+void LrTextureShadRem::convertCv2Arr_1Chan(const cv::Mat& frame, unsigned char frameChar[][IM_COLS])
+{
+	for (int ii = 0; ii < IM_ROWS; ii++)
+	{
+		for (int jj = 0; jj < IM_COLS; jj++)
+		{
+			frameChar[ii][jj] = (unsigned char)(frame.at<uchar>(ii, jj));
+		}
+	}
+}
+
+// ##################################################################################################
+// ###   convertCv2Arr3Channel()   ###
+// main function call to identify shadows in an image. Tons of calls in here
+void LrTextureShadRem::convertCv2Arr_3Chan(const cv::Mat& frame, unsigned char frameChar[][IM_COLS*IM_CHAN])
+{
+	for (int ii = 0; ii < IM_ROWS; ii++)
+	{
+		for (int jj = 0; jj < IM_COLS; jj++)
+		{
+			for (int kk = 0; kk < IM_CHAN; kk++)
+			{
+				frameChar[ii][IM_CHAN*jj+kk] = (unsigned char)(frame.at<Vec3b>(ii, jj)[kk]);
+			}
+		}
+	}
+}
+
 // ##################################################################################################
 // ###   removeShadows()   ###
 // main function call to identify shadows in an image. Tons of calls in here
@@ -42,103 +76,69 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	cv::Mat grayFrame, grayBg, hsvFrame, hsvBg;
 
-
-	const int imRows = frame.rows;
-	const int imCols = frame.cols;
-	const int imChan = frame.channels();
-
-	// Convert openCV Mat to array of uchar - TODO - turn into function mat2intArr(src, dest, imRows, imCols, imChan)
-	// small sample image: 384  x 288  x 3
-	// large sample image: 3120 x 4160 x 3
-	auto frameChar = new uchar[3120][4160 * 3]{};
-	auto frameGrayChar = new uchar[3120][4160]{};
-	for (int ii = 0; ii < imRows; ii++)
-	{
-		for (int jj = 0; jj < imCols; jj++)
-		{
-			for (int kk = 0; kk < imChan; kk++)
-			{
-				frameChar[ii][3*jj+kk] = (uint)(frame.at<Vec3b>(ii, jj)[kk]);
-			}
-		}
-	}
-
-	// For debugging - verify image looks like it's supposed to
-	/*cv::Mat tempColor(imRows, imCols, CV_8UC3, frameInt);
-	std::cout << "gray Frame: ";
-	std::cout << tempColor.size << "\n";
-	std::cout << tempColor.channels() << "\n";
-	cv::imshow("tempColor", tempColor);
-	cv::waitKey();*/
+    // Check that image size is expected size
+	int imRows = frame.rows;
+	int imCols = frame.cols;
+	int imChan = frame.channels();
+	
+    if ( imRows != IM_ROWS ) 
+    {
+           printf("input rows: %d vs %d expected\n", imRows, IM_ROWS);
+        throw std::invalid_argument( "\nImage Rows do not match expected values.\n Update path to image or values in Constants.h\n\n;" );
+    }
+    if ( imCols != IM_COLS ) 
+    {
+           printf("input cols: %d vs %d expected\n", imCols, IM_COLS);
+        throw std::invalid_argument( "\nImage Columns do not match expected values.\n Update path to image or values in Constants.h\n\n;" );
+    }
+    if ( imChan != IM_CHAN ) 
+    {
+           printf("input channels: %d vs %d expected\n", imChan, IM_CHAN);
+        throw std::invalid_argument( "\nImage Channels do not match expected values.\n Update path to image or values in Constants.h\n\n;" );
+    }
+	
 
 
+
+
+	// ##############################################################################
 	// parallel convert color to gray
+	
+	auto frameChar = new unsigned char[IM_ROWS][IM_COLS * IM_CHAN]{};
+	auto frameGrayChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	
+	
+	// Use this to go from OpenCV Mat to unsigned char array (3 channel)
+	convertCv2Arr_3Chan(frame, frameChar);
+	
 	auto startT3 = high_resolution_clock::now();
-	convertRGBtoGrayscale(frameChar, frameGrayChar, imCols, imRows, imChan);
+	convertRGBtoGrayscale_CUDA(frameChar, frameGrayChar, IM_COLS, IM_ROWS, IM_CHAN);
+	
 	auto stopT3 = high_resolution_clock::now();
 	auto grayscaleTimeParallel = duration_cast<microseconds>(stopT3 - startT3);
 	
-	cv::Mat tempGray(imRows, imCols, CV_8UC1, frameGrayChar);
+	
+	// ##############################################################################
 
-
-	// For debugging - verify image looks like it's supposed to
-	/*std::cout << "gray Frame: ";
-	std::cout << tempGray.size << "\n";
-	std::cout << tempGray.channels() << "\n";
-	cv::imshow("tempGray", tempGray);
-	cv::waitKey();*/
-
-
-	auto startT = high_resolution_clock::now();
 	cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
-
-
-
-	auto stopT2 = high_resolution_clock::now();
-	auto grayscaleTime = duration_cast<microseconds>(stopT2 - startT); \
-	grayFrame = tempGray;
-
-
-	/*
-	// For debugging - verify image looks like it's supposed to
-	for (int ii = 0; ii < imRows; ii++)
-	{
-		for (int jj = 0; jj < imCols; jj++)
-		{
-			std::cout << ii << " " << jj << "\n";
-			std::cout << "Col me  : " << uint(frameInt[ii][3 * jj]) << " " << uint(frameInt[ii][3 * jj + 1]) << " " << uint(frameInt[ii][3 * jj + 2]) << "\n";
-			std::cout << "Col CV  : " << (uint)(frame.at<Vec3b>(ii, jj)[0]) << " " << (uint)(frame.at<Vec3b>(ii, jj)[1]) << " " << (uint)(frame.at<Vec3b>(ii, jj)[2]) << "\n";
-			std::cout << "Gray par: " << uint(frameGrayInt[ii][jj]) << "\n";
-			std::cout << "Gray CV : " << uint(grayFrame.at<uchar>(ii, jj)) << "\n\n";
-		}
-	}*/
-
 	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
+	
 
-	auto stopT = high_resolution_clock::now();
-	auto durationConverter = duration_cast<microseconds>(stopT - startT);
-	std::cout << "Color Converter: " << durationConverter.count() / 1e6 << " seconds\n";
-	std::cout << "  grayscaleTime: " << grayscaleTime.count() / 1e6 << " seconds\n\n";
-	std::cout << "  grayscaleTimeParallel: " << grayscaleTimeParallel.count() / 1e6 << " seconds\n\n";
-
-	//cv::imshow("fgMask", fgMask);
-	//cv::imshow("srMask", srMask);
-	//cv::waitKey();
 
 	// TODO Make frame stats parallel
 	// calculate global frame properties
-	startT = high_resolution_clock::now();
+	auto startT = high_resolution_clock::now();
 
 	avgAtten = ((avgAtten * frameCount) + frameAvgAttenuation(hsvFrame, hsvBg, fg.mask)) / (frameCount + 1);
 	avgSat = ((avgSat * frameCount) + frameAvgSaturation(hsvFrame, fg.mask)) / (frameCount + 1);
 	avgPerim = ((avgPerim * frameCount) + fgAvgPerim(fg)) / (frameCount + 1);
 	++frameCount;
 
-	stopT = high_resolution_clock::now();
+	auto stopT = high_resolution_clock::now();
 	auto durationFrameProps = duration_cast<microseconds>(stopT - startT);
-	std::cout << "Frame Prop Calcs: " << durationFrameProps.count() / 1e6 << " seconds\n\n";
+	//std::cout << "Frame Prop Calcs: " << durationFrameProps.count() / 1e6 << " seconds\n\n";
 
 
 	// find candidate shadow pixels
@@ -148,20 +148,20 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	//cv::waitKey();
 	// TODO Make edge finding parallel
 	startT = high_resolution_clock::now();
-	std::cout << "Starting Edge diff:\n";
+	//std::cout << "Starting Edge diff:\n";
 	// split using foreground edges
 	auto start2 = high_resolution_clock::now();
 	getEdgeDiff(grayFrame, grayBg, fg, candidateShadows, cannyFrame, cannyBg, cannyDiffWithBorders, borders, cannyDiff);
 	auto stop2 = high_resolution_clock::now();
 	auto deltaT = duration_cast<microseconds>(stop2 - start2);
-	std::cout << "  getEdgeDiff(): " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "  getEdgeDiff(): " << deltaT.count() / 1e6 << " seconds\n";
 
 	start2 = high_resolution_clock::now();
 	cv::Mat splitCandidateShadowsMask;
 	maskDiff(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
 	stop2 = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stop2 - start2);
-	std::cout << "  maskDiff(): " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "  maskDiff(): " << deltaT.count() / 1e6 << " seconds\n";
 
 	//cv::imshow("cannyDiff", cannyDiff);
 	//cv::imshow("splitCandidateShadowsMask", splitCandidateShadowsMask);
@@ -173,11 +173,11 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	splitCandidateShadows.update(splitCandidateShadowsMask, false, false);
 	stop2 = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stop2 - start2);
-	std::cout << "  splitCandidateShadows.update(): " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "  splitCandidateShadows.update(): " << deltaT.count() / 1e6 << " seconds\n";
 
 	stopT = high_resolution_clock::now();
 	auto durationDetector = duration_cast<microseconds>(stopT - startT);
-	std::cout << "Edge Detector: " << durationDetector.count() / 1e6 << " seconds\n";
+	//std::cout << "Edge Detector: " << durationDetector.count() / 1e6 << " seconds\n";
 
 
 	// TODO Post processing parallel
@@ -213,7 +213,7 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	//cv::waitKey();
 
 	 
-	std::cout << "Post Processing: "  << durationPost.count()       / 1e6 << " seconds\n";
+	//std::cout << "Post Processing: "  << durationPost.count()       / 1e6 << " seconds\n";
 
 	srMask.setTo(0, shadows);
 	if (params.cleanSrMask || params.fillSrMask) {
@@ -315,7 +315,7 @@ float LrTextureShadRem::fgAvgPerim(const ConnCompGroup& fg) {
 void LrTextureShadRem::maskDiff(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, const int m2Radius) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	diff.create(m1.size(), CV_8U);
-	const int temp = 2 * m2Radius + 1;
+	
 
 	for (int y = 0; y < m1.rows; ++y) {
 		uchar* m1Ptr = m1.ptr(y);
@@ -366,10 +366,13 @@ void LrTextureShadRem::getSkeleton(const cv::Mat& mask, cv::Mat& skeleton) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::Mat tmpMask = mask.clone();
 	tmpMask.copyTo(skeleton);
-
+	
+    int iterCount = 0;
+    int maxIter   = 50;
 	bool changed = true;
-	while (changed) {
+	while (changed && iterCount < maxIter) {
 		changed = false;
+		iterCount++;
 
 		for (int k = 0; k < (int) skeletonKernels.size(); ++k) {
 			for (int y = 1; y < tmpMask.rows - 1; ++y) {
@@ -391,7 +394,7 @@ void LrTextureShadRem::getSkeleton(const cv::Mat& mask, cv::Mat& skeleton) {
 						}
 					}
 
-					if (allMatch) {
+					if (allMatch && skeletonPtr[x] > 0) {
 						skeletonPtr[x] = 0;
 						changed = true;
 						break;
@@ -444,6 +447,9 @@ std::vector<cv::Mat> LrTextureShadRem::getSkeletonKernels() {
 	cv::flip(skeletonKernels[1], skeletonKernels[3], 1);
 	cv::flip(skeletonKernels[3], skeletonKernels[5], 0);
 	cv::flip(skeletonKernels[5], skeletonKernels[7], 1);
+	
+	//for (int ii = 0; ii<8; ii++)
+	//    std::cout << "Skeleton " << ii << "\n" << skeletonKernels[ii] << "\n\n\n";
 
 	return skeletonKernels;
 }
@@ -502,13 +508,91 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	invCandidateShadows.setTo(0, candidateShadows);
 
 	auto startT = high_resolution_clock::now();
-	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize,
-			params.cannyL2Grad);
+	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 	cannyFrame.setTo(0, invCandidateShadows);
 
 	auto stopT = high_resolution_clock::now();
 	auto deltaT = duration_cast<microseconds>(stopT - startT);
-	std::cout << "   Canny1 IM time: " << deltaT.count() / 1e6 << " seconds\n";
+	
+	
+	
+	// Convert openCV Mat to array of uchar 
+	// small sample image: 384  x 288  x 3
+	// large sample image: 3120 x 4160 x 3
+	auto frameGrayChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameGrayBlurChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameSobelEdgeMagChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameSobelEdgeXDirChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameSobelEdgeYDirChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameCannyChar = new unsigned char[IM_ROWS][IM_COLS]{};
+	auto frameCannyChar2 = new unsigned char[IM_ROWS][IM_COLS]{};
+	
+	// Convert gray CV Mat to char array
+	convertCv2Arr_1Chan(grayFrame, frameGrayChar);
+	
+	// ##############################################################################
+	// Test Blur Kernel here
+	auto startT4 = high_resolution_clock::now();
+	//GaussianBlur(frameGrayChar, frameGrayBlurChar, IM_COLS, IM_ROWS);
+	
+	auto stopT4 = high_resolution_clock::now();
+	auto gaussBlurTimeParallel = duration_cast<microseconds>(stopT4 - startT4);
+	
+	// ##############################################################################
+	// Test Sobel Kernel here
+	startT4 = high_resolution_clock::now();
+	//SobelFilter(frameGrayBlurChar, frameSobelEdgeMagChar, frameSobelEdgeXDirChar, frameSobelEdgeYDirChar, IM_COLS, IM_ROWS);
+	
+	stopT4 = high_resolution_clock::now();
+	auto sobelFilterTimeParallel = duration_cast<microseconds>(stopT4 - startT4);
+	
+	// ##############################################################################
+	// Test Canny Kernel here
+	startT4 = high_resolution_clock::now();
+	//CannyDet(frameSobelEdgeXDirChar, frameSobelEdgeYDirChar, frameCannyChar, IM_COLS, IM_ROWS);
+	
+	stopT4 = high_resolution_clock::now();
+	auto cannyFilterTimeParallel = duration_cast<microseconds>(stopT4 - startT4);
+	
+	
+	// ##############################################################################
+	// Fast Canny Here - contains Gauss+Sobel+Canny
+	auto startTMaster = high_resolution_clock::now();
+	CannyMasterCall(frameGrayChar, frameCannyChar2, IM_COLS, IM_ROWS);
+	auto stopTMaster = high_resolution_clock::now();
+	auto cannyFilterTimeParallel2 = duration_cast<microseconds>(stopTMaster - startTMaster);
+	
+	// ##############################################################################
+	
+	// Use this to go from unsigned char array to OpenCV Mat 
+	//cv::Mat tempBlur(IM_ROWS, IM_COLS, CV_8UC1, frameGrayBlurChar);
+	//cv::Mat tempSobelMag(IM_ROWS, IM_COLS, CV_8UC1, frameSobelEdgeMagChar);
+	//cv::Mat tempSobelXDir(IM_ROWS, IM_COLS, CV_8UC1, frameSobelEdgeXDirChar);
+	//cv::Mat tempSobelYDir(IM_ROWS, IM_COLS, CV_8UC1, frameSobelEdgeYDirChar);
+	//cv::Mat tempCanny(IM_ROWS, IM_COLS, CV_8UC1, frameCannyChar);
+	cv::Mat tempCanny2(IM_ROWS, IM_COLS, CV_8UC1, frameCannyChar2);
+
+	
+    std::cout << "****************************************************" << "\n\n";
+	//std::cout << "  gaussBlurTimeParallel     : " << gaussBlurTimeParallel.count() / 1e3 << " msec\n";
+	//std::cout << "  sobelFilterTimeParallel   : " << sobelFilterTimeParallel.count() / 1e3 << " msec\n";
+	//std::cout << "  cannyFilterTimeParallel   : " << cannyFilterTimeParallel.count() / 1e3 << " msec\n";
+	//std::cout << "  Canny Total Parallel Time : " << (gaussBlurTimeParallel.count()+sobelFilterTimeParallel.count()+cannyFilterTimeParallel.count()) / 1e3 << " msec\n";
+	
+	std::cout << "\n  Fast Canny Total Parallel Time   : " << cannyFilterTimeParallel2.count() / 1e3 << " msec\n";
+	
+	
+	std::cout << "\n  Open CVCanny Time: " << deltaT.count() / 1e3 << " msec\n";
+	
+	
+	std::cout << "\n  speedup: x" << float(deltaT.count()) / cannyFilterTimeParallel2.count() << "\n\n";
+    std::cout << "****************************************************" << "\n\n";
+	
+	//cv::imshow("cannyFrame", cannyFrame);
+	//cv::waitKey();
+	cv::imwrite("cannyImages/cannyCV.jpg", cannyFrame);
+	//cv::imwrite("cannyImages/cannyCuda-Slow.jpg", tempCanny);
+	cv::imwrite("cannyImages/cannyCuda-Fast.jpg", tempCanny2);
 
 	startT = high_resolution_clock::now();
 	cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
@@ -516,7 +600,7 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 
 	stopT = high_resolution_clock::now(); 
 	deltaT = duration_cast<microseconds>(stopT - startT);
-	std::cout << "   Canny2 IM time: " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "   Canny2 IM time: " << deltaT.count() / 1e6 << " seconds\n";
 
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);
 
@@ -524,7 +608,7 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	maskDiff(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
 	stopT = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stopT - startT);
-	std::cout << "   maskDiff IM time: " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "   maskDiff IM time: " << deltaT.count() / 1e6 << " seconds\n";
 
 
 	startT = high_resolution_clock::now();
@@ -539,10 +623,11 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 
 	stopT = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stopT - startT);
-	std::cout << "   dilate IM time: " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "   dilate IM time: " << deltaT.count() / 1e6 << " seconds\n";
 
 
 
+    
 	//startT = high_resolution_clock::now();
 	int splitIncrement = (avgAtten < params.avgAttenThresh ? params.splitIncrement : 2);
 	splitIncrement = (avgPerim > params.avgPerimThresh ? splitIncrement : 0);
@@ -550,13 +635,62 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	cannyDiff.setTo(0, borders);
 	if (splitIncrement > 0) {
 		cv::dilate(cannyDiff, cannyDiff, cv::Mat(splitIncrement, splitIncrement, CV_8U, cv::Scalar(255)));
-		startT = high_resolution_clock::now();
+		
+		
+		
+        
+	    // ##############################################################################
+	    // Test skeleton Kernel here
+	
+        auto frameCannyDiffChar = new unsigned char[IM_ROWS][IM_COLS]{};
+        auto frameSkeletonChar = new unsigned char[IM_ROWS][IM_COLS]{};
+        
+	    convertCv2Arr_1Chan(cannyDiff, frameCannyDiffChar);
+	    
+        cv::Mat myCannyDiff(IM_ROWS, IM_COLS, CV_8UC1, frameCannyDiffChar);
+        
+        // Run it
+	    auto startTpar = high_resolution_clock::now();
+	
+        SkeletonKernel(frameCannyDiffChar, frameSkeletonChar, IM_COLS, IM_ROWS);
+        
+        auto stopTpar = high_resolution_clock::now();
+        auto deltaTSkeleton = duration_cast<microseconds>(stopTpar - startTpar);
+        
+        
+	    cv::Mat mySkeleton(IM_ROWS, IM_COLS, CV_8UC1, frameSkeletonChar);
+        
+	    cv::imwrite("skeletonImages/skeletonParallel.jpg", mySkeleton);
+        //cv::imshow("mySkeleton", mySkeleton);
+		
+		
+	    // ##############################################################################
+		// Serial version
+	    startT = high_resolution_clock::now();
+	    
 		getSkeleton(cannyDiff, cannyDiff);
+	    mySkeleton.copyTo(cannyDiff);
+	    
+		stopT = high_resolution_clock::now();
+	    deltaT = duration_cast<microseconds>(stopT - startT);
+	
+	
+	    // ##############################################################################
+	    
+	    
+        std::cout << "****************************************************" << "\n\n";
+        std::cout << "   SkeletonKernel-Parallel: " << deltaTSkeleton.count() / 1e3 << " msec\n\n";
+        
+	    std::cout << "   SkeletonKernel-Serial  : " << deltaT.count() / 1e3 << " msec\n";
+	    std::cout << "   speedup : x" << float(deltaT.count())/deltaTSkeleton.count() << "\n\n";
+	
+	
+        std::cout << "****************************************************" << "\n\n";
+	    cv::imwrite("skeletonImages/skeletonSerial.jpg", cannyDiff);
+	
+        //cv::imshow("mainSkeleton", cannyDiff);
+        //cv::waitKey();
 	}
-
-	stopT = high_resolution_clock::now();
-	deltaT = duration_cast<microseconds>(stopT - startT);
-	std::cout << "   get skeleton IM time: " << deltaT.count() / 1e6 << " seconds\n";
 }
 
 

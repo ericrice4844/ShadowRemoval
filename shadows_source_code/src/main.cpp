@@ -22,15 +22,16 @@ int main() {
 
 	std::cout << "\nBeginning Image Processing\n\n";
 
-	// load frame, background and foreground
+	// load frame, background and foreground 3120x4160
 	cv::Mat frame = cv::imread("../shadows_source_code/samples/BackYard/frame2.jpg");
 	cv::Mat bg    = cv::imread("../shadows_source_code/samples/BackYard/bg2.jpg");
 	cv::Mat blank = cv::imread("../shadows_source_code/samples/BackYard/blank2.bmp", IMREAD_GRAYSCALE);
 	cv::Mat fg    = cv::imread("../shadows_source_code/samples/BackYard/fg2.bmp", IMREAD_GRAYSCALE);
 
-
-	//cv::Mat frame = cv::imread("../shadows_source_code/samples/frame1.jpg");
-	//cv::Mat bg = cv::imread("../shadows_source_code/samples/bg1.jpg");
+    
+    // 288x384
+	//cv::Mat frame = cv::imread("../shadows_source_code/samples/frame1.bmp");
+	//cv::Mat bg = cv::imread("../shadows_source_code/samples/bg1.bmp");
 	//cv::Mat blank = cv::imread("../shadows_source_code/samples/blank1.bmp", IMREAD_GRAYSCALE);
 	//cv::Mat fg = cv::imread("../shadows_source_code/samples/fg1.bmp", IMREAD_GRAYSCALE);
 
@@ -50,10 +51,14 @@ int main() {
 	auto duration = duration_cast<microseconds>(stop - start);
 
 	// show results
-
 	//cv::imshow("frame", frame);
+	//cv::resizeWindow("frame", 500, 500);
+	
 	//cv::imshow("bg", bg);
+	//cv::resizeWindow("bg", 500, 500);
+	
 	//cv::imshow("fg", fg);
+	//cv::resizeWindow("fg", 500, 500);
 	
 	cv::imshow("lrTex", lrTexMask);
 	cv::resizeWindow("lrTex", 500, 500);

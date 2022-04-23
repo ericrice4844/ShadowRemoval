@@ -1,21 +1,26 @@
-
-
-
-#include "Parallel_Kernels.h"
+///////////////////////////////////////////////////////////////
+//  
+//      Color_Converter.cu
+//      Constaints kernel functions for each of the color converters
+//      
+//
+///////////////////////////////////////////////////////////////
+extern "C" {
+#include "Color_Convert_Kernel.h"
+}
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuda_runtime.h>
-#include <cooperative_groups.h>
+#include <iostream>
 
 
-using namespace cv;
+
 
 // ##################################################################################################
 // ###   kernel_convertRGBtoGrayscale_GLOBAL()   ### 
 // Basic global memory RGB to grayscale
 __global__ void 
-kernel_convertRGBtoGrayscale_GLOBAL(uchar* rgbImage, uchar* grayImage, int width, int height, int channels)
+kernel_convertRGBtoGrayscale_GLOBAL(unsigned char* rgbImage, unsigned char* grayImage, int width, int height, int channels)
 {
 	// Row X and Column Y pixel positions
 	int x = threadIdx.x + blockIdx.x * blockDim.x; // x for column
@@ -36,21 +41,26 @@ kernel_convertRGBtoGrayscale_GLOBAL(uchar* rgbImage, uchar* grayImage, int width
 }
 
 
+
+
 // ##################################################################################################
 // ###   convertRGBtoGrayscale()    ###
 // This function sets up the device memory, calls the kernel, and retrieves the output from the device
 // currently hardcoded to a specific image size 
-extern "C" void convertRGBtoGrayscale(uchar hostRgbImage[3120][4160*3], uchar hostGrayImage[3120][4160], int imageWidth, int imageHeight, int channels)
+extern "C" void convertRGBtoGrayscale_CUDA(unsigned char hostRgbImage[IM_ROWS][IM_COLS*IM_CHAN], unsigned char hostGrayImage[IM_ROWS][IM_COLS], 
+                           int imageWidth, int imageHeight, int channels)
 {
 	
-	std::cout << "  Parallel Start\n\n";
+	if (DEBUG_MODE)
+	    std::cout << "  COLOR::Parallel Start\n\n";
 
-	uchar* deviceRgbImage;
-	uchar* deviceGrayImage;
+	unsigned char* deviceRgbImage;
+	unsigned char* deviceGrayImage;
 
 	// Allocate device RGB image
-	std::cout << "    cudaMalloc RGB\n";
-	if (cudaMalloc((void**)&deviceRgbImage, imageWidth * imageHeight * channels * sizeof(uchar)) != cudaSuccess)
+	if (DEBUG_MODE)
+    	std::cout << "    COLOR::cudaMalloc RGB\n";
+	if (cudaMalloc((void**)&deviceRgbImage, imageWidth * imageHeight * channels * sizeof(unsigned char)) != cudaSuccess)
 	{
 		std::cout << "        Error!";
 		return;
@@ -58,8 +68,9 @@ extern "C" void convertRGBtoGrayscale(uchar hostRgbImage[3120][4160*3], uchar ho
 
 
 	// Allocate device Gray image
-	std::cout << "    cudaMalloc Gray\n";
-	if (cudaMalloc((void**)&deviceGrayImage, imageWidth * imageHeight * sizeof(uchar)) != cudaSuccess)
+	if (DEBUG_MODE)
+	    std::cout << "    COLOR::cudaMalloc Gray\n";
+	if (cudaMalloc((void**)&deviceGrayImage, imageWidth * imageHeight * sizeof(unsigned char)) != cudaSuccess)
 	{
 		cudaFree(deviceRgbImage);
 		std::cout << "        Error!";
@@ -67,8 +78,9 @@ extern "C" void convertRGBtoGrayscale(uchar hostRgbImage[3120][4160*3], uchar ho
 	}
 
 	// copy RGB image
-	std::cout << "    cudaMemcpy RGB\n";
-	if (cudaMemcpy(deviceRgbImage, hostRgbImage, imageWidth * imageHeight * channels * sizeof(uchar), cudaMemcpyHostToDevice) != cudaSuccess)
+	if (DEBUG_MODE)
+	    std::cout << "    COLOR::cudaMemcpy RGB\n";
+	if (cudaMemcpy(deviceRgbImage, hostRgbImage, imageWidth * imageHeight * channels * sizeof(unsigned char), cudaMemcpyHostToDevice) != cudaSuccess)
 	{
 		cudaFree(deviceRgbImage);
 		cudaFree(deviceGrayImage);
@@ -81,11 +93,19 @@ extern "C" void convertRGBtoGrayscale(uchar hostRgbImage[3120][4160*3], uchar ho
 	int blockSize = 32;
 	dim3 DimGrid((imageWidth - 1) / blockSize + 1, (imageHeight - 1) / blockSize + 1, 1);
 	dim3 DimBlock(blockSize, blockSize, 1);
-	std::cout << "    kernel_convertRGBtoGrayscale\n";
+	if (DEBUG_MODE)
+	    std::cout << "    COLOR::kernel_convertRGBtoGrayscale\n";
+	
+	// Global Mem
 	kernel_convertRGBtoGrayscale_GLOBAL <<<DimGrid,DimBlock>>>(deviceRgbImage, deviceGrayImage, imageWidth, imageHeight, channels);
+	
+	// Shared mem opt
+    //kernel_convertRGBtoGrayscale_SHARED1<<<DimGrid,DimBlock>>>(deviceRgbImage, deviceGrayImage, imageWidth, imageHeight);
+    
 
-	std::cout << "    cudaMemcpy Gray\n";
-	if (cudaMemcpy(hostGrayImage, deviceGrayImage, imageWidth * imageHeight * sizeof(uchar), cudaMemcpyDeviceToHost) != cudaSuccess)
+	if (DEBUG_MODE)
+	    std::cout << "    COLOR::cudaMemcpy Gray\n";
+	if (cudaMemcpy(hostGrayImage, deviceGrayImage, imageWidth * imageHeight * sizeof(unsigned char), cudaMemcpyDeviceToHost) != cudaSuccess)
 	{
 		std::cout << "        Error!";
 		cudaFree(deviceRgbImage);
@@ -94,21 +114,10 @@ extern "C" void convertRGBtoGrayscale(uchar hostRgbImage[3120][4160*3], uchar ho
 
 	}
 
-	std::cout << "    cudaFree\n";
+	if (DEBUG_MODE)
+	    std::cout << "    COLOR::cudaFree\n";
 	cudaFree(deviceGrayImage);
 	cudaFree(deviceRgbImage);
 
 }
 
-
-
-// ##################################################################################################
-// ###   initFilter()   ###
-// place holder wrapper
-extern "C" void initFilter(void)
-{
-	std::cout << "HERE\n\n";;
-	//cv::imshow(rgbImage);
-	//cv::waitKey(0);
-
-}
