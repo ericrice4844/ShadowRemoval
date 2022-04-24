@@ -9,6 +9,7 @@
 // (see http://www.opensource.org/licenses for more info)
 #include <stdexcept>
 #include "../include/LrTextureShadRem.h"
+#include "mask.h"
 using namespace cv;
 using namespace std::chrono;
 
@@ -158,10 +159,10 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	start2 = high_resolution_clock::now();
 	cv::Mat splitCandidateShadowsMask;
-	maskDiff(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
+	mask_diff_gpu(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
 	stop2 = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stop2 - start2);
-	//std::cout << "  maskDiff(): " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "  mask_diff_gpu(): " << deltaT.count() / 1e6 << " seconds\n";
 
 	//cv::imshow("cannyDiff", cannyDiff);
 	//cv::imshow("splitCandidateShadowsMask", splitCandidateShadowsMask);
@@ -310,9 +311,9 @@ float LrTextureShadRem::fgAvgPerim(const ConnCompGroup& fg) {
 
 
 // ##################################################################################################
-// ###   maskDiff()   ###
+// ###   mask_diff_gpu()   ###
 // Does masking of image. TODO Need to look at more
-void LrTextureShadRem::maskDiff(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, const int m2Radius) {
+void LrTextureShadRem::mask_diff_gpu(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, const int m2Radius) {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	diff.create(m1.size(), CV_8U);
 	
@@ -605,10 +606,10 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);
 
 	startT = high_resolution_clock::now();
-	maskDiff(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
+	mask_diff_gpu(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
 	stopT = high_resolution_clock::now();
 	deltaT = duration_cast<microseconds>(stopT - startT);
-	//std::cout << "   maskDiff IM time: " << deltaT.count() / 1e6 << " seconds\n";
+	//std::cout << "   mask_diff_gpu IM time: " << deltaT.count() / 1e6 << " seconds\n";
 
 
 	startT = high_resolution_clock::now();
