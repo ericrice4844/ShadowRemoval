@@ -22,44 +22,46 @@ __global__ void mask_diff_glbl(uint8_t* m1, uint8_t* m2, uint8_t* diff,
 			for (int j = 0; j <= (2 * m2Radius); j++) {
 				int cur_col = start_col + j;
 				int cur_row = start_row + i;
-				if (cur_col >= 0 && cur_col < width 
-					&& cur_row >= 0 && cur_row < height)
-					is_bg += m2[(cur_row * width) + cur_col];
+				if (cur_col >= 0 && cur_col < width && cur_row >= 0 && cur_row < height) {
+					atomicAdd(&is_bg, m2[(cur_row * width) + cur_col]);
+				}
 			}
-			diff[col+(row*width)] = ((m1[col+(row*width)] > 0) && (is_bg == 0)) * 255;
 		}
+		diff[col + (row * width)] = ((m1[col + (row * width)] > 0) && (is_bg == 0)) * 255;
 	}
 }
 
 __global__ void mask_diff_shrd(uint8_t* m1, uint8_t* m2, uint8_t* diff, int width, int height, int m2Radius) {
-	__shared__ uint8_t local_m2[32][32];
+	__shared__ uint8_t local_m2[20][20];
 	int col = blockDim.x * blockIdx.x + threadIdx.x;
 	int row = blockDim.y * blockIdx.y + threadIdx.y;
-	if (col < width && row < height) {
-		local_m2[threadIdx.y][threadIdx.x] = m2[(col + (row * width))];
-	} else {
-		local_m2[threadIdx.y][threadIdx.x] = 0;
+	int lcl_col = 2 + threadIdx.x;
+	int lcl_row = 2 + threadIdx.y;
+	for (int x = 0; x < 2; x++) {
+		for (int y = 0; y < 2; y++) {
+			int cur_col = threadIdx.x + (x*blockDim.x);
+			int cur_row = threadIdx.y + (y * blockDim.y);
+			if (cur_row < 20 && cur_col < 20) {
+				int glbl_row = row - 2 + (y * blockDim.y);
+				int glbl_col = col - 2 + (x * blockDim.x);
+				if (glbl_col >= 0 && glbl_col < width && glbl_row >= 0 && glbl_row < height)
+					local_m2[cur_row][cur_col] = m2[((glbl_row)*width) + glbl_col];
+				else
+					local_m2[cur_row][cur_col] = 0;
+			}
+		}
 	}
 	__syncthreads();
 	if (col < width && row < height) {
 		int is_bg = 0;
-		int start_col = col - m2Radius;
-		int start_row = row - m2Radius;
-		for (int i = 0; i <= (2 * m2Radius); i++) {
-			for (int j = 0; j <= (2 * m2Radius); j++) {
-				int cur_col = start_col + j;
-				int cur_row = start_row + i;
-				if (cur_col >= 0 && cur_col < width && cur_row >= 0 && cur_row < height) {
-					if ((j+threadIdx.x) < blockDim.x && (j+threadIdx.x) >= 0 &&
-						(i+threadIdx.y) < blockDim.y && (i+threadIdx.y) >= 0) {
-
-						is_bg += local_m2[threadIdx.y+i][threadIdx.x+j];
-					} else is_bg += m2[(cur_row * width) + cur_col];
-				}
+		for (int i = -m2Radius; i <= m2Radius; i++) {
+			for (int j = -m2Radius; j <= m2Radius; j++) {
+				int cur_col = lcl_col + j;
+				int cur_row = lcl_row + i;
+				atomicAdd(&is_bg,local_m2[cur_row][cur_col]);
 			}
-			// diff[col] = (m1[col]>0 && !is_bg) ? 255 : 0;
-			diff[col + (row * width)] = ((m1[(col + (row * width))] > 0) && (is_bg == 0)) * 255;
 		}
+		diff[col + (row * width)] = ((m1[(col + (row * width))] > 0) && (is_bg == 0)) * 255;
 	}
 }
 
@@ -164,7 +166,7 @@ void mask_diff_gpu(unsigned char* hostImage1, unsigned char* hostImage2, unsigne
 		// ##################################################################################################
 		// Do the computation on the GPU
 		// ##################################################################################################
-		int blockSize = 32;
+		int blockSize = 16;
 		int grid_width = (((imageWidth - 1)/blockSize) + 1);
 		int grid_height = (((imageHeight - 1)/blockSize) + 1);
 		dim3 DimGrid(grid_width, grid_height, 1);
