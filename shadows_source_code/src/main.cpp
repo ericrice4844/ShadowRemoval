@@ -16,8 +16,21 @@ using namespace cv;
 using namespace std::chrono;
 
 
-int main() {
-
+int main(int argc, char** argv) {
+	int use_cuda = 0;
+	if (argc > 0) {
+		char* cuda_arg = argv[0];
+		use_cuda = atoi(cuda_arg);
+		if (use_cuda) {
+			std::cout << "Implementation Specified: GPU" << std::endl;
+		}
+		else {
+			std::cout << "Implementation Specified: CPU" << std::endl;
+		}
+	}
+	else {
+		std::cout << "Implementation Unspecified: Default to CPU" << std::endl;
+	}
 	cv::setNumThreads(1);
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 
@@ -37,10 +50,13 @@ int main() {
 	//cv::Mat fg = cv::imread("../shadows_source_code/samples/fg1.bmp", IMREAD_GRAYSCALE);
 
 	std::cout << "Images Loaded \n\n";
-
+	cv::Mat frame_show = frame.clone();
+	cv::imshow("pre", frame_show);
+	cv::resizeWindow("pre", 500, 500);
 	//
 	// create shadow removers
 	LrTextureShadRem lrTex;
+	lrTex.use_cuda = use_cuda;
 
 	// matrices to store the masks after shadow removal
 	cv::Mat lrTexMask;

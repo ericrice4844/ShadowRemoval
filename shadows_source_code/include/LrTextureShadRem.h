@@ -41,6 +41,7 @@
 class LrTextureShadRem {
 
 	public:
+		int use_cuda;
 		cv::Mat candidateShadows;
 		cv::Mat cannyFrame;
 		cv::Mat cannyBg;

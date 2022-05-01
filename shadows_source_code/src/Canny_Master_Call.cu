@@ -881,7 +881,7 @@ void CannyMasterCall(unsigned char* hostGrayImage, unsigned char* hostCannyImage
 }
 
 
-void CannyMasterCall(cv::Mat& input, cv::Mat& output) {
+void CannyMasterCall(const cv::Mat& input, cv::Mat& output) {
 
     int image_size = input.total();
     int width = input.cols;

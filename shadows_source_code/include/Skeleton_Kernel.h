@@ -8,6 +8,7 @@
 ///////////////////////////////////////////////////////////////
 #pragma once
 #include "Constants.h"
+#include <opencv2/opencv.hpp>
 
 
 // This file includes all headers for the Skeleton_Kernels.cu functions
@@ -17,8 +18,8 @@
 #ifndef __Skeleton_KERNELS_H_
 #define __Skeleton_KERNELS_H_
 
-extern "C" void SkeletonKernel(unsigned char hostInput[IM_ROWS][IM_COLS], unsigned char hostOutput[IM_ROWS][IM_COLS],
-                             int imageWidth, int imageHeight);
+void SkeletonKernel(unsigned char* hostInput, unsigned char* hostOutput, int imageWidth, int imageHeight);
+void SkeletonKernel(cv::Mat& input, cv::Mat& output);
 
 
 

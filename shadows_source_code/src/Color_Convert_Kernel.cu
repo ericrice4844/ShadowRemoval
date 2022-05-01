@@ -120,7 +120,7 @@ void convertRGBtoGrayscale_CUDA(unsigned char* hostRgbImage, unsigned char* host
 }
 
 
-void convertRGBtoGrayscale_CUDA(cv::Mat& input, cv::Mat& output) {
+void convertRGBtoGrayscale_CUDA(const cv::Mat& input, cv::Mat& output) {
 
 	int image_size = input.total();
 	int width = input.cols;

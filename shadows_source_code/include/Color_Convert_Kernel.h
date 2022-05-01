@@ -23,7 +23,7 @@
 void convertRGBtoGrayscale_CUDA(unsigned char* rgbImage, 
                            unsigned char* grayImage, 
                            int width, int height, int channels);
-void convertRGBtoGrayscale_CUDA(cv::Mat& input, cv::Mat& output);
+void convertRGBtoGrayscale_CUDA(const cv::Mat& input, cv::Mat& output);
           
 
 #endif                 

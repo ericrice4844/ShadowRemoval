@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include "../include/LrTextureShadRem.h"
 #include "mask.h"
+#include "Canny_Master_Call.h"
+#include "Color_Convert_Kernel.h"
 using namespace cv;
 using namespace std::chrono;
 
@@ -98,13 +100,13 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
         throw std::invalid_argument( "\nImage Channels do not match expected values.\n Update path to image or values in Constants.h\n\n;" );
     }
 
-#if USE_CUDA
-	convertRGBtoGrayscale_CUDA(frame, grayFrame);
-	convertRGBtoGrayscale_CUDA(bg, grayBg);
-#else
-	cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
-	cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
-#endif
+	if(use_cuda) {
+		convertRGBtoGrayscale_CUDA(frame, grayFrame);
+		convertRGBtoGrayscale_CUDA(bg, grayBg);
+	} else {
+		cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
+		cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
+	}
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
 	
@@ -125,11 +127,11 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	cv::Mat splitCandidateShadowsMask;
 	std::cout << "Running Difference Mask" << std::endl;
-#if USE_CUDA
-	mask_diff_gpu(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
-#else
-	maskDiff(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
-#endif
+	if(use_cuda) {
+		mask_diff_gpu(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
+	} else {
+		maskDiff(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
+	}
 
 	std::cout << "Getting Shadow Candidates" << std::endl;
 	// connected components are candidate shadow regions
@@ -454,24 +456,24 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	invCandidateShadows.setTo(0, candidateShadows);
 
 	std::cout << "Running Canny Filter" << std::endl;
-#if USE_CUDA
-	CannyMasterCall(grayFrame, cannyFrame);
-	CannyMasterCall(grayBg, cannyBg);
-#else
-	cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
-	cannyFrame.setTo(0, invCandidateShadows);
-	cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
-	cannyBg.setTo(0, invCandidateShadows);
-#endif
+	if(use_cuda) {
+		CannyMasterCall(grayFrame, cannyFrame);
+		CannyMasterCall(grayBg, cannyBg);
+	} else {
+		cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
+		cannyFrame.setTo(0, invCandidateShadows);
+		cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
+		cannyBg.setTo(0, invCandidateShadows);
+	}
 
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);
 
 	std::cout << "Running Difference Mask" << std::endl;
-#if USE_CUDA
-	mask_diff_gpu(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
-#else
-	maskDiff(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
-#endif
+	if(use_cuda) {
+		mask_diff_gpu(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
+	} else {
+		maskDiff(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
+	}
 
 	int borderDiffRadius = (avgAtten < params.avgAttenThresh ? params.borderDiffRadius : 2);
 	borderDiffRadius = (avgPerim > params.avgPerimThresh ? borderDiffRadius : 0);
@@ -489,13 +491,13 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	if (splitIncrement > 0) {
 		cv::dilate(cannyDiff, cannyDiff, cv::Mat(splitIncrement, splitIncrement, CV_8U, cv::Scalar(255)));
 		std::cout << "Running Skeleton" << std::endl;
-#if USE_CUDA
-		cv::Mat mySkeleton(IM_ROWS, IM_COLS, CV_8UC1);
-        SkeletonKernel(cannyDiff, mySkeleton, IM_COLS, IM_ROWS);
-		mySkeleton.copyTo(cannyDiff);
-#else
-		getSkeleton(cannyDiff, cannyDiff);
-#endif
+		if(use_cuda) {
+			cv::Mat mySkeleton(cannyDiff.size(), CV_8UC1);
+			SkeletonKernel(cannyDiff, mySkeleton);
+			mySkeleton.copyTo(cannyDiff);
+		} else {
+			getSkeleton(cannyDiff, cannyDiff);
+		}
 	}
 }
 

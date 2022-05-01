@@ -7,9 +7,7 @@
 //
 ///////////////////////////////////////////////////////////////
 
-extern "C" {
 #include "Skeleton_Kernel.h"
-}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,7 +102,7 @@ kernel_getSkeleton_GLOBAL(unsigned char* in, unsigned char* out, int width, int 
 // ###   SkeletonParallel()    ###
 // This function sets up the device memory, calls the kernel, and retrieves the output from the device
 // currently hardcoded to a specific image size 
-extern "C" void SkeletonKernel(unsigned char hostInput[IM_ROWS][IM_COLS], unsigned char hostOutput[IM_ROWS][IM_COLS], 
+void SkeletonKernel(unsigned char* hostInput, unsigned char* hostOutput, 
                              int imageWidth, int imageHeight)
 {
 
@@ -253,28 +251,14 @@ extern "C" void SkeletonKernel(unsigned char hostInput[IM_ROWS][IM_COLS], unsign
 
 }
 
+void SkeletonKernel(cv::Mat& input, cv::Mat& output) {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	int image_size = input.total();
+	int width = input.cols;
+	int height = input.rows;
+	unsigned char* host_input = input.data;
+	if (0 == output.total()) {
+		output.create(height, width, CV_8UC1);
+	}
+	SkeletonKernel(host_input, output.data, width, height);
+}

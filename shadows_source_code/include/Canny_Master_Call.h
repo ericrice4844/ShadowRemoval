@@ -20,7 +20,7 @@
 
 
 void CannyMasterCall(unsigned char* hostGrayImage, unsigned char* hostCannyImage, int imageWidth, int imageHeight);
-void CannyMasterCall(cv::Mat& input, cv::Mat& output);
+void CannyMasterCall(const cv::Mat& input, cv::Mat& output);
 
 
 #endif
