@@ -18,8 +18,8 @@ using namespace std::chrono;
 
 int main(int argc, char** argv) {
 	int use_cuda = 0;
-	if (argc > 0) {
-		char* cuda_arg = argv[0];
+	if (argc > 1) {
+		char* cuda_arg = argv[1];
 		use_cuda = atoi(cuda_arg);
 		if (use_cuda) {
 			std::cout << "Implementation Specified: GPU" << std::endl;
@@ -50,9 +50,9 @@ int main(int argc, char** argv) {
 	//cv::Mat fg = cv::imread("../shadows_source_code/samples/fg1.bmp", IMREAD_GRAYSCALE);
 
 	std::cout << "Images Loaded \n\n";
-	cv::Mat frame_show = frame.clone();
-	cv::imshow("pre", frame_show);
-	cv::resizeWindow("pre", 500, 500);
+	//cv::Mat frame_show = frame.clone();
+	//cv::imshow("pre", frame_show);
+	//cv::resizeWindow("pre", 500, 500);
 	//
 	// create shadow removers
 	LrTextureShadRem lrTex;
