@@ -11,6 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/core/utils/logger.hpp"
 #include "../include/LrTextureShadRem.h"
+#include "mask.h"
 using namespace cv;
 using namespace std::chrono;
 
@@ -37,7 +38,7 @@ int main() {
 
 	std::cout << "Images Loaded \n\n";
 
-	
+	//
 	// create shadow removers
 	LrTextureShadRem lrTex;
 
@@ -49,6 +50,9 @@ int main() {
 	lrTex.removeShadows(frame, blank, bg, lrTexMask);
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(stop - start);
+
+	std::cout << "\nImage size: " << frame.size;
+	std::cout << "\nTotal Time: " << duration.count() / 1e6 << " seconds\n";
 
 	// show results
 	//cv::imshow("frame", frame);
@@ -62,11 +66,6 @@ int main() {
 	
 	cv::imshow("lrTex", lrTexMask);
 	cv::resizeWindow("lrTex", 500, 500);
-
-
-	std::cout << "\n\nDone!\n";
-	std::cout << "\nImage size: " << frame.size;
-	std::cout << "\nTotal Time: " << duration.count() / 1e6 << " seconds\n";
 
 	cv::waitKey();
 	

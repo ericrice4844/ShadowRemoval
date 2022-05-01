@@ -7,9 +7,7 @@
 //
 ///////////////////////////////////////////////////////////////
 
-extern "C" {
 #include "Canny_Master_Call.h"
-}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -594,7 +592,7 @@ kernel_Float2Char(float* gradStrength,
 // ###   GaussianBlur()    ###
 // This function sets up the device memory, calls the kernel, and retrieves the output from the device
 // currently hardcoded to a specific image size 
-extern "C" void CannyMasterCall(unsigned char hostGrayImage[IM_ROWS][IM_COLS], unsigned char hostCannyImage[IM_ROWS][IM_COLS], 
+void CannyMasterCall(unsigned char* hostGrayImage, unsigned char* hostCannyImage, 
                              int imageWidth, int imageHeight)
 {
 
@@ -883,6 +881,17 @@ extern "C" void CannyMasterCall(unsigned char hostGrayImage[IM_ROWS][IM_COLS], u
 }
 
 
+void CannyMasterCall(cv::Mat& input, cv::Mat& output) {
+
+    int image_size = input.total();
+    int width = input.cols;
+    int height = input.rows;
+    unsigned char* host_input = input.data;
+    if (0 == output.total()) {
+        output.create(height, width, CV_8UC1);
+    }
+    CannyMasterCall(host_input, output.data, width, height);
+}
 
 
 

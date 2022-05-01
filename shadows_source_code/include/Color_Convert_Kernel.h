@@ -8,6 +8,7 @@
 ///////////////////////////////////////////////////////////////
 #pragma once
 #include "Constants.h"
+#include <opencv2/opencv.hpp>
 
 
 // This file includes all headers for the Parallel_Kernels.cu functions
@@ -19,10 +20,10 @@
 
 
 
-extern "C" void convertRGBtoGrayscale_CUDA(unsigned char rgbImage[IM_ROWS][IM_COLS*IM_CHAN], 
-                           unsigned char grayImage[IM_ROWS][IM_COLS], 
+void convertRGBtoGrayscale_CUDA(unsigned char* rgbImage, 
+                           unsigned char* grayImage, 
                            int width, int height, int channels);
-                           
+void convertRGBtoGrayscale_CUDA(cv::Mat& input, cv::Mat& output);
           
 
 #endif                 

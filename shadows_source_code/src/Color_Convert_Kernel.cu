@@ -5,9 +5,7 @@
 //      
 //
 ///////////////////////////////////////////////////////////////
-extern "C" {
 #include "Color_Convert_Kernel.h"
-}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +45,7 @@ kernel_convertRGBtoGrayscale_GLOBAL(unsigned char* rgbImage, unsigned char* gray
 // ###   convertRGBtoGrayscale()    ###
 // This function sets up the device memory, calls the kernel, and retrieves the output from the device
 // currently hardcoded to a specific image size 
-extern "C" void convertRGBtoGrayscale_CUDA(unsigned char hostRgbImage[IM_ROWS][IM_COLS*IM_CHAN], unsigned char hostGrayImage[IM_ROWS][IM_COLS], 
+void convertRGBtoGrayscale_CUDA(unsigned char* hostRgbImage, unsigned char* hostGrayImage, 
                            int imageWidth, int imageHeight, int channels)
 {
 	
@@ -121,3 +119,15 @@ extern "C" void convertRGBtoGrayscale_CUDA(unsigned char hostRgbImage[IM_ROWS][I
 
 }
 
+
+void convertRGBtoGrayscale_CUDA(cv::Mat& input, cv::Mat& output) {
+
+	int image_size = input.total();
+	int width = input.cols;
+	int height = input.rows;
+	unsigned char* host_input = input.data;
+	if (0 == output.total()) {
+		output.create(height, width, CV_8UC1);
+	}
+	convertRGBtoGrayscale_CUDA(host_input, output.data, width, height, 3);
+}

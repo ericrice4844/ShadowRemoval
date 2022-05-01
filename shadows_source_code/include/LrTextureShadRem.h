@@ -20,7 +20,6 @@
 #include "opencv2/core/utils/logger.hpp"
 #include <vector>
 
-extern "C" {
 #include "Parallel_Kernels.h"
 #include "Color_Convert_Kernel.h"
 #include "Gaussian_Kernels.h"
@@ -28,7 +27,6 @@ extern "C" {
 #include "Canny_Kernels.h"
 #include "Canny_Master_Call.h"
 #include "Skeleton_Kernel.h"
-}
 
 /*
 */

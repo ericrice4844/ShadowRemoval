@@ -8,6 +8,7 @@
 ///////////////////////////////////////////////////////////////
 #pragma once
 #include "Constants.h"
+#include <opencv2/opencv.hpp>
 
 
 // This file includes all headers for the Sobel_Kernels.cu functions
@@ -18,8 +19,8 @@
 #define __CANNY_MASTER_CALL_H_
 
 
-extern "C" void CannyMasterCall(unsigned char hostGrayImage[IM_ROWS][IM_COLS], unsigned char hostCannyImage[IM_ROWS][IM_COLS],
-                             int imageWidth, int imageHeight);
+void CannyMasterCall(unsigned char* hostGrayImage, unsigned char* hostCannyImage, int imageWidth, int imageHeight);
+void CannyMasterCall(cv::Mat& input, cv::Mat& output);
 
 
 #endif

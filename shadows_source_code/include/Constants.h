@@ -16,6 +16,8 @@
 
 #define TIMER_MODE false
 
+#define USE_CUDA false
+
 // Define the image size here
 // Big image
 #define IM_ROWS 3120
