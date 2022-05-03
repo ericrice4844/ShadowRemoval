@@ -95,7 +95,6 @@ void ConnCompGroup::update(const cv::Mat& fgMask, bool clean, bool fill, int min
 	}
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(stop - start);
-	std::cout << "          ConnCompGroup::update() Time: " << duration.count() / 1e6 << " seconds\n";
 }
 
 // ##################################################################################################
