@@ -82,6 +82,12 @@ int main(int argc, char** argv) {
 	
 	cv::imshow("lrTex", lrTexMask);
 	cv::resizeWindow("lrTex", 500, 500);
+	
+	if (use_cuda){
+	    cv::imwrite("Final/lrTexMask-CUDA.jpg", lrTexMask);
+    } else{
+	    cv::imwrite("Final/lrTexMask-CPU.jpg", lrTexMask);
+    }
 
 	cv::waitKey();
 	
