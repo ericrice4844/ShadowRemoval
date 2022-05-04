@@ -23,7 +23,7 @@ __global__ void mask_diff_glbl(uint8_t* m1, uint8_t* m2, uint8_t* diff,
 				int cur_col = start_col + j;
 				int cur_row = start_row + i;
 				if (cur_col >= 0 && cur_col < width && cur_row >= 0 && cur_row < height) {
-					atomicAdd(&is_bg, m2[(cur_row * width) + cur_col]);
+					is_bg = is_bg + m2[(cur_row * width) + cur_col]);
 				}
 			}
 		}
@@ -181,7 +181,7 @@ void mask_diff_gpu(unsigned char* hostImage1, unsigned char* hostImage2, unsigne
 		}
 		//Copy result to host
 		if (DEBUG_MODE) std::cout << "    mask_diff_gpu::cudaMemcpy\n";
-		cudaMemcpy((void**)hostDiff, deviceDiff, imageWidth * imageHeight * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+		cudaMemcpy(hostDiff, deviceDiff, imageWidth * imageHeight * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 		//Free the memory
 		if (DEBUG_MODE) std::cout << "    mask_diff_gpu::cudaFree\n";
 		cudaFree(deviceImage1);
