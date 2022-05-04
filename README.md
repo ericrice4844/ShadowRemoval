@@ -1,7 +1,8 @@
 
 ##########################################################################
 # ShadowRemoval
-ECE569 Shadow Removal Code
+# ECE569 Shadow Removal Code
+# Group 2
 
 # Eric Rice, Tanner Bryant, Jonathan Herrera, Charles Hoskins
 
@@ -59,11 +60,14 @@ Execute Instructions:
 In ~/ECE569_ShadowRemoval/build, execute the commands for:
 
 1.) Serial Version:
-    ./shadowRemover 0
+    ./shadowRemover 0 2>&1 | tee Serial_Timing.txt
     
 2.) Parallel Version:
-    ./shadowRemover 1
+    ./shadowRemover 1 2>&1 | tee CUDA_Timing.txt
 
+
+For Timing Comparison:
+diff Serial_Timing.txt CUDA_Timing.txt
 
 
 ##########################################################################
