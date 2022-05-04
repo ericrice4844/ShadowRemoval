@@ -1,6 +1,5 @@
 
 ##########################################################################
-# ShadowRemoval
 # ECE569 Shadow Removal Code
 # Group 2
 
@@ -10,19 +9,20 @@
 
 
 ##########################################################################
+# Required Packages
 Requires openCV 4.5.5 @ "/home/u5/ericrice4844/opencv/build") [path in CMakeLists.txt by default]
 Requires cmake 3.5.1  @ "/home/u5/ericrice4844/CMAKE_FILES/cmake-3.5.1-Linux-x86_64")
 
     
 ##########################################################################
-Source code is in 'shadows_source_code'
+# Source code is in 'shadows_source_code'
     *.h   files in the 'include' directory
     *.cpp files in the 'src' directory
     *.cu  files in the 'src' directory
     
 
 ##########################################################################
-Build instructions:
+# Build instructions:
 
 0.) Create main directory for build
     mkdir ~/ECE569_Spring22_ShadowRemoval_Group2
@@ -55,7 +55,7 @@ Build instructions:
 
 
 ##########################################################################
-Execute Instructions:
+# Execute Instructions:
 
 In ~/ECE569_ShadowRemoval/build, execute the commands for:
 
@@ -71,7 +71,7 @@ diff Serial_Timing.txt CUDA_Timing.txt
 
 
 ##########################################################################
-** NOTE ** 
+# NOTEs 
 * All output images in following directories: Canny  MaskDiff  Skeleton  Colors  Final
 * Appended with "-CPU" are serial, and "-CUDA" and parallel.
 
