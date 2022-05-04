@@ -74,6 +74,10 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	ConnCompGroup fg(fgMask);
 	fg.mask.copyTo(srMask);
+	
+	
+	auto startT = high_resolution_clock::now();
+	auto stopT = high_resolution_clock::now();
 
 	// TODO Make color convert parallel
 
@@ -99,14 +103,27 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
            printf("input channels: %d vs %d expected\n", imChan, IM_CHAN);
         throw std::invalid_argument( "\nImage Channels do not match expected values.\n Update path to image or values in Constants.h\n\n;" );
     }
-
+    
+	std::cout << "Running Color Conversion" << std::endl;
+    startT = high_resolution_clock::now();
 	if(use_cuda) {
 		convertRGBtoGrayscale_CUDA(frame, grayFrame);
 		convertRGBtoGrayscale_CUDA(bg, grayBg);
+		
+        stopT = high_resolution_clock::now();
+        auto Colors_GPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*Colors-CUDA: " << Colors_GPU.count() / 1e3 << " msec\n\n";
+        cv::imwrite("Colors/Gray-GPU.jpg", grayFrame);
 	} else {
 		cv::cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
 		cv::cvtColor(bg, grayBg, COLOR_BGR2GRAY);
+		
+        stopT = high_resolution_clock::now();
+        auto Colors_CPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*Colors-Serial: " << Colors_CPU.count() / 1e3 << " msec\n\n";
+        cv::imwrite("Colors/Gray-CPU.jpg", grayFrame);
 	}
+	
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
 	
@@ -127,21 +144,39 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 
 	cv::Mat splitCandidateShadowsMask;
 	std::cout << "Running Difference Mask" << std::endl;
+    startT = high_resolution_clock::now();
 	if(use_cuda) {
 		mask_diff_gpu(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
+		
+	    stopT = high_resolution_clock::now();
+        auto maskDiff_GPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*maskDiff-Split-CUDA: " << maskDiff_GPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("MaskDiff/splitCandidateShadowsMask-GPU.jpg", splitCandidateShadowsMask);
 	} else {
 		maskDiff(candidateShadows, cannyDiff, splitCandidateShadowsMask, params.splitRadius);
+		
+	    stopT = high_resolution_clock::now();
+        auto maskDiff_CPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*maskDiff-Split-Serial: " << maskDiff_CPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("MaskDiff/splitCandidateShadowsMask-CPU.jpg", splitCandidateShadowsMask);
 	}
+	
 
 	std::cout << "Getting Shadow Candidates" << std::endl;
+    startT = high_resolution_clock::now();
 	// connected components are candidate shadow regions
 	splitCandidateShadows.update(splitCandidateShadowsMask, false, false);
 
 	shadows.create(grayFrame.size(), CV_8U);
 	shadows.setTo(cv::Scalar(0));
+	
+	stopT = high_resolution_clock::now();
+	auto shadowCandidates_CPU = duration_cast<microseconds>(stopT - startT);
+    std::cout << "*shadowCandidates-Serial: " << shadowCandidates_CPU.count() / 1e3 << " msec\n\n";
 
 	// classify regions with high correlation as shadows
 	std::cout << "Running Shadow Classification" << std::endl;
+    startT = high_resolution_clock::now();
 	for (int sr = 0; sr < (int) splitCandidateShadows.comps.size(); ++sr) {
 		ConnComp& cc = splitCandidateShadows.comps[sr];
 
@@ -150,8 +185,14 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 			cc.draw(shadows, 255);
 		}
 	}
+	
+	stopT = high_resolution_clock::now();
+	auto shadowClassification_CPU = duration_cast<microseconds>(stopT - startT);
+    std::cout << "*shadowClassification-Serial: " << shadowClassification_CPU.count() / 1e3 << " msec\n\n";
+
 
 	std::cout << "Running Morphology Transforms" << std::endl;
+    startT = high_resolution_clock::now();
 	bool cleanShadows = (avgAtten < params.avgAttenThresh ? params.cleanShadows : false);
 	if (cleanShadows || params.fillShadows || params.minShadowPerim > 0) {
 		if (cleanShadows) {
@@ -167,7 +208,14 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 		postSrMask.update(srMask, params.cleanSrMask, params.fillSrMask);
 		postSrMask.mask.copyTo(srMask);
 	}
-	std::cout << "Shadow Removal Complete" << std::endl;
+	
+	
+	
+	stopT = high_resolution_clock::now();
+	auto Morphology_CPU = duration_cast<microseconds>(stopT - startT);
+    std::cout << "*Morphology-Serial: " << Morphology_CPU.count() / 1e3 << " msec\n\n";
+	
+	std::cout << "\n\nShadow Removal Complete" << std::endl;
 }
 
 
@@ -454,25 +502,55 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_SILENT);
 	cv::Mat invCandidateShadows(candidateShadows.size(), CV_8U, cv::Scalar(255));
 	invCandidateShadows.setTo(0, candidateShadows);
+	
+	auto startT = high_resolution_clock::now();
+	auto stopT = high_resolution_clock::now();
+	
 
 	std::cout << "Running Canny Filter" << std::endl;
+	 startT = high_resolution_clock::now();
 	if(use_cuda) {
 		CannyMasterCall(grayFrame, cannyFrame);
 		CannyMasterCall(grayBg, cannyBg);
+		
+	    stopT = high_resolution_clock::now();
+        auto cannyTimer_GPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*Canny-CUDA: " << cannyTimer_GPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("Canny/cannyFrame-GPU.jpg", cannyFrame);
+		
 	} else {
 		cv::Canny(grayFrame, cannyFrame, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 		cannyFrame.setTo(0, invCandidateShadows);
 		cv::Canny(grayBg, cannyBg, params.cannyThresh1, params.cannyThresh2, params.cannyApertureSize, params.cannyL2Grad);
 		cannyBg.setTo(0, invCandidateShadows);
+		
+	    stopT = high_resolution_clock::now();
+        auto cannyTimer_CPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*Canny-Serial: " << cannyTimer_CPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("Canny/cannyFrame-CPU.jpg", cannyFrame);
 	}
 
 	int edgeDiffRadius = (avgPerim > params.avgPerimThresh ? params.edgeDiffRadius : 0);
 
+
+
 	std::cout << "Running Difference Mask" << std::endl;
+    startT = high_resolution_clock::now();
 	if(use_cuda) {
 		mask_diff_gpu(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
+		
+	    stopT = high_resolution_clock::now();
+        auto maskDiff_GPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*maskDiff-Canny-CUDA: " << maskDiff_GPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("MaskDiff/cannyDiffWithBorders-GPU.jpg", cannyDiffWithBorders);
+        
 	} else {
 		maskDiff(cannyFrame, cannyBg, cannyDiffWithBorders, edgeDiffRadius);
+		
+	    stopT = high_resolution_clock::now();
+        auto maskDiff_CPU = duration_cast<microseconds>(stopT - startT);
+        std::cout << "*maskDiff-Canny-Serial: " << maskDiff_CPU.count() / 1e3 << " msec\n\n";
+	    cv::imwrite("MaskDiff/cannyDiffWithBorders-CPU.jpg", cannyDiffWithBorders);
 	}
 
 	int borderDiffRadius = (avgAtten < params.avgAttenThresh ? params.borderDiffRadius : 2);
@@ -490,13 +568,25 @@ void LrTextureShadRem::getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& gray
 	cannyDiff.setTo(0, borders);
 	if (splitIncrement > 0) {
 		cv::dilate(cannyDiff, cannyDiff, cv::Mat(splitIncrement, splitIncrement, CV_8U, cv::Scalar(255)));
+		
 		std::cout << "Running Skeleton" << std::endl;
 		if(use_cuda) {
 			cv::Mat mySkeleton(cannyDiff.size(), CV_8UC1);
 			SkeletonKernel(cannyDiff, mySkeleton);
 			mySkeleton.copyTo(cannyDiff);
+		
+	        stopT = high_resolution_clock::now();
+            auto skeleton_GPU = duration_cast<microseconds>(stopT - startT);
+            std::cout << "*skeleton-CUDA: " << skeleton_GPU.count() / 1e3 << " msec\n\n";
+	        cv::imwrite("Skeleton/Skeleton-GPU.jpg", cannyDiff);
+            
 		} else {
 			getSkeleton(cannyDiff, cannyDiff);
+		
+	        stopT = high_resolution_clock::now();
+            auto maskDiff_CPU = duration_cast<microseconds>(stopT - startT);
+            std::cout << "*skeleton-Serial: " << maskDiff_CPU.count() / 1e3 << " msec\n\n";
+	        cv::imwrite("Skeleton/Skeleton-CPU.jpg", cannyDiff);
 		}
 	}
 }
