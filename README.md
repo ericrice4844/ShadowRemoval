@@ -28,7 +28,7 @@ Build instructions:
     
 1.) Copy/unpack build to home directory
     a.) Copy files to main directory
-        cp -r /home/u5/ericrice4844/ece569/Shadow_Removal_Final/ShadowRemoval-feature-integration ~/ECE569_Spring22_ShadowRemoval_Group2
+        cp -r /home/u5/ericrice4844/ece569/Shadow_Removal_Final/ShadowRemoval-feature-integration/* ~/ECE569_Spring22_ShadowRemoval_Group2
     - or - 
     b.) Extract projec files to main directory
         unzip project.zip ~/ECE569_Spring22_ShadowRemoval_Group2
@@ -40,6 +40,7 @@ Build instructions:
     module load cuda11/11.0
 
 4.) Create "build" directory
+    rm ~/ECE569_Spring22_ShadowRemoval_Group2/build
     mkdir ~/ECE569_Spring22_ShadowRemoval_Group2/build
     cd ~/ECE569_Spring22_ShadowRemoval_Group2/build
 
