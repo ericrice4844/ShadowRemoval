@@ -105,7 +105,7 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
     }
     
 	std::cout << "Running Color Conversion" << std::endl;
-    startT = high_resolution_clock::now();
+    	startT = high_resolution_clock::now();
 	if(use_cuda) {
 		convertRGBtoGrayscale_CUDA(frame, grayFrame);
 		convertRGBtoGrayscale_CUDA(bg, grayBg);
@@ -127,7 +127,24 @@ void LrTextureShadRem::removeShadows(const cv::Mat& frame, const cv::Mat& fgMask
 	cv::cvtColor(frame, hsvFrame, COLOR_BGR2HSV);
 	cv::cvtColor(bg, hsvBg, COLOR_BGR2HSV);
 	
-
+	std::cout << "Running Frame Average Attenuation" << std::endl;
+	startT = high_resolution_clock::now();
+	if(use_cuda)
+	{
+		frame_avg_atten_gpu(hsvFrame, hsvBg, fg.mask);
+		
+		stopT = high_resolution_clock::now();
+        	auto AvgAtten_GPU = duration_cast<microseconds>(stopT - startT);
+        	std::cout << "*AvgAtten-CUDA: " << AvgAtten_GPU.count() / 1e3 << " msec\n\n";
+	}
+	else
+	{
+		frameAvgAttenuation(hsvFrame, hsvBg, fg.mask);
+		
+		stopT = high_resolution_clock::now();
+        	auto AvgAtten_CPU = duration_cast<microseconds>(stopT - startT);
+        	std::cout << "*AvgAtten-Serial: " << AvgAtten_CPU.count() / 1e3 << " msec\n\n";
+	}
 
 	// TODO Make frame stats parallel
 	// calculate global frame properties
