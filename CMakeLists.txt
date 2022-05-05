@@ -97,7 +97,8 @@ add_library(Parallel_Kernels STATIC
     ${PROJECT_SOURCE_DIR}/shadows_source_code/src/Canny_Kernels.cu   
     ${PROJECT_SOURCE_DIR}/shadows_source_code/src/Parallel_Kernels.cu   
     ${PROJECT_SOURCE_DIR}/shadows_source_code/src/Color_Convert_Kernel.cu 
-    ${PROJECT_SOURCE_DIR}/shadows_source_code/src/mask.cu 
+    ${PROJECT_SOURCE_DIR}/shadows_source_code/src/mask.cu
+    ${PROJECT_SOURCE_DIR}/shadows_source_code/src/FrameProperties.cu 
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Skeleton_Kernel.h  
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Canny_Master_Call.h   
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Gaussian_Kernels.h
@@ -106,6 +107,7 @@ add_library(Parallel_Kernels STATIC
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Parallel_Kernels.h
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Color_Convert_Kernel.h
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/mask.h
+    ${PROJECT_SOURCE_DIR}/shadows_source_code/include/FrameProperties.h
     ${PROJECT_SOURCE_DIR}/shadows_source_code/include/Constants.h
 )
  
