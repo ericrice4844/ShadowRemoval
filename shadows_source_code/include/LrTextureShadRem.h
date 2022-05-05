@@ -11,7 +11,6 @@
 #ifndef LRTEXTURESHADREM_H_
 #define LRTEXTURESHADREM_H_
 
-
 #include "Constants.h"
 
 #include <opencv2/opencv.hpp>
@@ -39,63 +38,66 @@
  *
  * Extended to split candidate shadow regions using foreground edges
  */
-class LrTextureShadRem {
+class LrTextureShadRem
+{
 
-	public:
-		int use_cuda;
-		cv::Mat candidateShadows;
-		cv::Mat cannyFrame;
-		cv::Mat cannyBg;
-		cv::Mat cannyDiffWithBorders;
-		cv::Mat borders;
-		cv::Mat cannyDiff;
-		ConnCompGroup splitCandidateShadows;
+public:
+	int use_cuda;
+	cv::Mat candidateShadows;
+	cv::Mat cannyFrame;
+	cv::Mat cannyBg;
+	cv::Mat cannyDiffWithBorders;
+	cv::Mat borders;
+	cv::Mat cannyDiff;
+	ConnCompGroup splitCandidateShadows;
 
-		cv::Mat distances;
-		cv::Mat avgDistances;
-		cv::Mat shadows;
+	cv::Mat distances;
+	cv::Mat avgDistances;
+	cv::Mat shadows;
 
-		float gradCorrThresh;
+	float gradCorrThresh;
 
-		LrTextureShadRem(const LrTextureShadRemParams& params = LrTextureShadRemParams());
-		virtual ~LrTextureShadRem();
+	LrTextureShadRem(const LrTextureShadRemParams &params = LrTextureShadRemParams());
+	virtual ~LrTextureShadRem();
 
-		void removeShadows(const cv::Mat& frame, const cv::Mat& fg, const cv::Mat& bg, cv::Mat& srMask);
-		
-		
-		// Functions to convert from CV to array. One for 3 channel and one for 1 channel images
-		void convertCv2Arr_3Chan(const cv::Mat& frame, unsigned char frameChar[IM_ROWS][IM_COLS*IM_CHAN]);
-		void convertCv2Arr_1Chan(const cv::Mat& frame, unsigned char frameChar[IM_ROWS][IM_COLS]);
+	void removeShadows(const cv::Mat &frame, const cv::Mat &fg, const cv::Mat &bg, cv::Mat &srMask);
 
+	// Serial implementation of the color converters
+	void serialHSVConverter(const cv::Mat &frame, unsigned char frameChar[IM_ROWS][IM_COLS][IM_CHAN]);
+	void serialGrayConverter(const cv::Mat &frame, unsigned char frameChar[IM_ROWS][IM_COLS * IM_CHAN]);
 
-	private:
-		static const std::vector<cv::Mat> skeletonKernels;
+	// Functions to convert from CV to array. One for 3 channel and one for 1 channel images
+	void convertCv2Arr_3Chan(const cv::Mat &frame, unsigned char frameChar[IM_ROWS][IM_COLS * IM_CHAN]);
+	void convertCv2Arr_1Chan(const cv::Mat &frame, unsigned char frameChar[IM_ROWS][IM_COLS]);
 
-		LrTextureShadRemParams params;
+private:
+	static const std::vector<cv::Mat> skeletonKernels;
 
-		int frameCount;
-		float avgAtten;
-		float avgSat;
-		float avgPerim;
+	LrTextureShadRemParams params;
 
-		ConnCompGroup postShadows;
-		ConnCompGroup postSrMask;
+	int frameCount;
+	float avgAtten;
+	float avgSat;
+	float avgPerim;
 
-		cv::Mat frHist;
-		cv::Mat bgHist;
+	ConnCompGroup postShadows;
+	ConnCompGroup postSrMask;
 
-		static float frameAvgAttenuation(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg);
-		static float frameAvgSaturation(const cv::Mat& hsvFrame, const cv::Mat& fg);
-		static float fgAvgPerim(const ConnCompGroup& fg);
-		static void maskDiff(cv::Mat& m1, cv::Mat& m2, cv::Mat& diff, int m2Radius);
-		static void getSkeleton(const cv::Mat& mask, cv::Mat& skeleton);
-		static std::vector<cv::Mat> getSkeletonKernels();
+	cv::Mat frHist;
+	cv::Mat bgHist;
 
-		void getCandidateShadows(const cv::Mat& hsvFrame, const cv::Mat& hsvBg, const cv::Mat& fg, cv::Mat& hsvMask);
-		void getEdgeDiff(const cv::Mat& grayFrame, const cv::Mat& grayBg, const ConnCompGroup& fg,
-				const cv::Mat& candidateShadows, cv::Mat& cannyFrame, cv::Mat& cannyBg, cv::Mat& cannyDiffWithBorders,
-				cv::Mat& borders, cv::Mat& cannyDiff);
-		float getGradDirCorr(const cv::Mat& grayFrame, const ConnComp& cc, const cv::Mat& grayBg);
+	static float frameAvgAttenuation(const cv::Mat &hsvFrame, const cv::Mat &hsvBg, const cv::Mat &fg);
+	static float frameAvgSaturation(const cv::Mat &hsvFrame, const cv::Mat &fg);
+	static float fgAvgPerim(const ConnCompGroup &fg);
+	static void maskDiff(cv::Mat &m1, cv::Mat &m2, cv::Mat &diff, int m2Radius);
+	static void getSkeleton(const cv::Mat &mask, cv::Mat &skeleton);
+	static std::vector<cv::Mat> getSkeletonKernels();
+
+	void getCandidateShadows(const cv::Mat &hsvFrame, const cv::Mat &hsvBg, const cv::Mat &fg, cv::Mat &hsvMask);
+	void getEdgeDiff(const cv::Mat &grayFrame, const cv::Mat &grayBg, const ConnCompGroup &fg,
+					 const cv::Mat &candidateShadows, cv::Mat &cannyFrame, cv::Mat &cannyBg, cv::Mat &cannyDiffWithBorders,
+					 cv::Mat &borders, cv::Mat &cannyDiff);
+	float getGradDirCorr(const cv::Mat &grayFrame, const ConnComp &cc, const cv::Mat &grayBg);
 };
 
 #endif /* LRTEXTURESHADREM_H_ */
