@@ -27,6 +27,7 @@
 #include "Canny_Kernels.h"
 #include "Canny_Master_Call.h"
 #include "Skeleton_Kernel.h"
+#include "FrameProperties.h"
 
 /*
 */
