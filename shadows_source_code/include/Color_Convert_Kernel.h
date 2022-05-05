@@ -9,8 +9,6 @@
 #pragma once
 #include "Constants.h"
 #include <opencv2/opencv.hpp>
-
-
 // This file includes all headers for the Parallel_Kernels.cu functions
 // Provides access to main cpp code.
 
@@ -20,11 +18,13 @@
 
 
 
-void convertRGBtoGrayscale_CUDA(unsigned char* rgbImage, 
-                           unsigned char* grayImage, 
-                           int width, int height, int channels);
-void convertRGBtoGrayscale_CUDA(const cv::Mat& input, cv::Mat& output);
-          
+void convertRGBToGrayAndHSV(unsigned char* rgbImage, 
+                                       unsigned char* grayImage, 
+						               unsigned char* hsvImage,
+                                       int width, 
+                                       int height, 
+                                       int channels);
 
+void convertRGBToGrayAndHSV(const cv::Mat& input, cv::Mat& output1, cv::Mat& output2);
 #endif                 
                            
